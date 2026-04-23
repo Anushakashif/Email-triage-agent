@@ -1,9 +1,13 @@
 import os
-import pickle
+import json
+import base64
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,8 +18,14 @@ def get_gmail_service():
     """Authenticate and return Gmail service."""
     creds = None
 
-    # Load existing token if it exists
-    if os.path.exists(TOKEN_PATH):
+    # First try environment variable (for production)
+    token_env = os.getenv("GMAIL_TOKEN")
+    if token_env:
+        token_data = json.loads(token_env)
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+
+    # Then try local token.json (for development)
+    elif os.path.exists(TOKEN_PATH):
         creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
 
     # If no valid credentials, login via browser
@@ -26,7 +36,7 @@ def get_gmail_service():
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
             creds = flow.run_local_server(port=8080, redirect_uri_trailing_slash=True)
 
-        # Save token for next time
+        # Save token locally
         with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
 
