@@ -33,9 +33,17 @@ def get_gmail_service():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
+            # Try credentials from environment variable (production)
+            creds_env = os.getenv("GMAIL_CREDENTIALS")
+            if creds_env:
+                creds_data = json.loads(creds_env)
+                # Write temporarily to file for flow
+                with open(CREDENTIALS_PATH, 'w') as f:
+                    json.dump(creds_data, f)
+            
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
             creds = flow.run_local_server(port=8080, redirect_uri_trailing_slash=True)
-
+            
         # Save token locally
         with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
