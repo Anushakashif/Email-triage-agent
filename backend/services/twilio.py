@@ -11,10 +11,14 @@ def send_whatsapp(message: str):
         os.getenv("TWILIO_AUTH_TOKEN")
     )
 
-    client.messages.create(
-        from_=os.getenv("TWILIO_WHATSAPP_FROM"),
-        to=os.getenv("TWILIO_WHATSAPP_TO"),
-        body=message
-    )
+    MAX_LENGTH = 1500
+    chunks = [message[i:i+MAX_LENGTH] for i in range(0, len(message), MAX_LENGTH)]
 
-    print("✅ WhatsApp message sent")
+    for i, chunk in enumerate(chunks):
+        client.messages.create(
+            from_=os.getenv("TWILIO_WHATSAPP_FROM"),
+            to=os.getenv("TWILIO_WHATSAPP_TO"),
+            body=f"({i+1}/{len(chunks)}) {chunk}"
+        )
+
+    print(f"✅ WhatsApp message sent in {len(chunks)} part(s)")
