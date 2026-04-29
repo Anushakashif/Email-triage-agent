@@ -139,7 +139,7 @@ Total Unread: {total}
 
     digest += "\n═══════════════════════════════"
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    digest += f"\nGo to {frontend_url}/review to approve and send"
+    digest += f"\nGo to {frontend_url} to approve and send"
 
     print("✅ Digest created")
 
