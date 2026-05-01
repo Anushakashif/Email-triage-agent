@@ -1,6 +1,5 @@
 import os
 import json
-import base64
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -18,33 +17,34 @@ def get_gmail_service():
     """Authenticate and return Gmail service."""
     creds = None
 
-    # First try environment variable (for production)
+    # Production → use env variable
     token_env = os.getenv("GMAIL_TOKEN")
     if token_env:
         token_data = json.loads(token_env)
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
 
-    # Then try local token.json (for development)
+    # Local development → use token.json
     elif os.path.exists(TOKEN_PATH):
         creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
 
-    # If no valid credentials, login via browser
+    # Refresh if expired (works automatically in production)
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        try:
+            with open(TOKEN_PATH, 'w') as token:
+                token.write(creds.to_json())
+        except:
+            pass
+
+    # No creds → authenticate via browser (local only)
     if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            # Try credentials from environment variable (production)
-            creds_env = os.getenv("GMAIL_CREDENTIALS")
-            if creds_env:
-                creds_data = json.loads(creds_env)
-                # Write temporarily to file for flow
-                with open(CREDENTIALS_PATH, 'w') as f:
-                    json.dump(creds_data, f)
-            
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
-            creds = flow.run_local_server(port=8080, redirect_uri_trailing_slash=True)
-            
-        # Save token locally
+        flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+        creds = flow.run_local_server(
+            port=8080,
+            redirect_uri_trailing_slash=True,
+            access_type='offline',
+            prompt='consent'
+        )
         with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
 
